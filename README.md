@@ -1,3 +1,4 @@
+PROGRAM_LIB_NAME.so
 # Solana Verified Builds
 
 This repository demonstrates how to implement verified builds for Solana programs. Verified builds ensure that your deployed program matches exactly with your public source code, promoting transparency and security in the Solana ecosystem.
