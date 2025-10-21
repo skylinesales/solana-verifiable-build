@@ -2,6 +2,23 @@
 
 This repository demonstrates how to implement verified builds for Solana programs. Verified builds ensure that your deployed program matches exactly with your public source code, promoting transparency and security in the Solana ecosystem.
 
+## 🆕 New Feature: CSV Processing System
+
+This repository now includes a complete CSV data processing system with:
+- **MCP Backend**: RESTful API server following Model Context Protocol
+- **Web Frontend**: Modern, responsive UI for CSV file management
+- **Rust Module**: High-performance CSV processing library
+
+👉 **[See CSV_PROCESSING.md for full documentation](CSV_PROCESSING.md)**
+
+### Quick Start for CSV System
+```bash
+./start-csv-system.sh
+```
+Then open http://localhost:3000 in your browser.
+
+---
+
 ## What are Verified Builds?
 
 Verified builds allow developers and users to verify that a deployed Solana program matches its source code. This verification:

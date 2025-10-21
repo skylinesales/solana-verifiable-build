@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solana Verify - CSV Processor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        .upload-section {
+            text-align: center;
+            padding: 40px;
+            border: 2px dashed #667eea;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .upload-section:hover {
+            border-color: #764ba2;
+            background: #f8f9ff;
+        }
+
+        .upload-section.dragover {
+            background: #f0f2ff;
+            border-color: #764ba2;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 6px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+            margin: 10px 5px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+        }
+
+        .file-list {
+            margin-top: 20px;
+        }
+
+        .file-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            margin-bottom: 10px;
+        }
+
+        .file-info {
+            flex: 1;
+        }
+
+        .file-name {
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .file-meta {
+            font-size: 0.85rem;
+            color: #6c757d;
+        }
+
+        .file-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .results {
+            margin-top: 20px;
+            padding: 20px;
+            background: #e7f3ff;
+            border-radius: 6px;
+        }
+
+        .results.error {
+            background: #ffe7e7;
+        }
+
+        .results.success {
+            background: #e7ffe7;
+        }
+
+        .table-container {
+            overflow-x: auto;
+            margin-top: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background: #667eea;
+            color: white;
+            font-weight: 600;
+        }
+
+        tr:hover {
+            background: #f8f9ff;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+
+        .status-indicator.online {
+            background: #28a745;
+        }
+
+        .status-indicator.offline {
+            background: #dc3545;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔐 Solana Verifiable Build</h1>
+            <p>CSV Data Processor with MCP Backend</p>
+            <div style="margin-top: 15px;">
+                <span class="status-indicator" id="statusIndicator"></span>
+                <span id="statusText">Checking connection...</span>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Upload CSV File</h2>
+            <div class="upload-section" id="uploadSection">
+                <div class="upload-icon">📁</div>
+                <h3>Drop CSV file here or click to browse</h3>
+                <p style="margin-top: 10px; color: #6c757d;">Supported format: .csv files</p>
+                <input type="file" id="fileInput" class="file-input" accept=".csv">
+                <button class="btn" onclick="document.getElementById('fileInput').click()">Choose File</button>
+            </div>
+
+            <div id="selectedFile" class="hidden" style="margin-top: 20px;">
+                <p><strong>Selected:</strong> <span id="fileName"></span></p>
+                <button class="btn" onclick="uploadFile()">Upload & Process</button>
+                <button class="btn btn-secondary" onclick="clearSelection()">Clear</button>
+            </div>
+
+            <div id="uploadResults" class="hidden results"></div>
+        </div>
+
+        <div class="card">
+            <h2>Uploaded Files</h2>
+            <button class="btn" onclick="loadFiles()">🔄 Refresh List</button>
+            <div id="fileList" class="file-list">
+                <p style="text-align: center; color: #6c757d;">No files uploaded yet</p>
+            </div>
+        </div>
+
+        <div id="dataView" class="card hidden">
+            <h2>CSV Data View</h2>
+            <div id="dataContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:3001';
+        let selectedFile = null;
+
+        // Check backend health
+        async function checkHealth() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/mcp/health`);
+                const data = await response.json();
+                document.getElementById('statusIndicator').className = 'status-indicator online';
+                document.getElementById('statusText').textContent = `Connected to ${data.service}`;
+            } catch (error) {
+                document.getElementById('statusIndicator').className = 'status-indicator offline';
+                document.getElementById('statusText').textContent = 'Backend offline - Please start the backend server';
+            }
+        }
+
+        // Setup file input
+        const fileInput = document.getElementById('fileInput');
+        const uploadSection = document.getElementById('uploadSection');
+
+        fileInput.addEventListener('change', (e) => {
+            handleFileSelect(e.target.files[0]);
+        });
+
+        // Drag and drop
+        uploadSection.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadSection.classList.add('dragover');
+        });
+
+        uploadSection.addEventListener('dragleave', () => {
+            uploadSection.classList.remove('dragover');
+        });
+
+        uploadSection.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadSection.classList.remove('dragover');
+            const file = e.dataTransfer.files[0];
+            if (file && file.name.endsWith('.csv')) {
+                handleFileSelect(file);
+            } else {
+                alert('Please select a CSV file');
+            }
+        });
+
+        function handleFileSelect(file) {
+            selectedFile = file;
+            document.getElementById('fileName').textContent = file.name;
+            document.getElementById('selectedFile').classList.remove('hidden');
+        }
+
+        function clearSelection() {
+            selectedFile = null;
+            fileInput.value = '';
+            document.getElementById('selectedFile').classList.add('hidden');
+            document.getElementById('uploadResults').classList.add('hidden');
+        }
+
+        async function uploadFile() {
+            if (!selectedFile) return;
+
+            const formData = new FormData();
+            formData.append('file', selectedFile);
+
+            const resultsDiv = document.getElementById('uploadResults');
+            resultsDiv.innerHTML = '<div class="spinner"></div><p style="text-align: center;">Uploading and processing...</p>';
+            resultsDiv.className = 'results';
+            resultsDiv.classList.remove('hidden');
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/mcp/csv/upload`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Now process the file
+                    const processResponse = await fetch(`${API_BASE_URL}/mcp/csv/${result.data.id}/process`, {
+                        method: 'POST'
+                    });
+                    const processResult = await processResponse.json();
+
+                    resultsDiv.className = 'results success';
+                    resultsDiv.innerHTML = `
+                        <h3>✅ Upload and Processing Complete!</h3>
+                        <p><strong>File:</strong> ${result.data.filename}</p>
+                        <p><strong>Total Records:</strong> ${processResult.data.totalRecords}</p>
+                        <p><strong>Processed:</strong> ${processResult.data.processedRecords}</p>
+                        <p><strong>Errors:</strong> ${processResult.data.errors.length}</p>
+                        ${processResult.data.errors.length > 0 ? `
+                            <details style="margin-top: 10px;">
+                                <summary>View Errors</summary>
+                                <pre>${JSON.stringify(processResult.data.errors, null, 2)}</pre>
+                            </details>
+                        ` : ''}
+                    `;
+
+                    loadFiles();
+                    setTimeout(clearSelection, 3000);
+                } else {
+                    throw new Error(result.error || 'Upload failed');
+                }
+            } catch (error) {
+                resultsDiv.className = 'results error';
+                resultsDiv.innerHTML = `<h3>❌ Error</h3><p>${error.message}</p>`;
+            }
+        }
+
+        async function loadFiles() {
+            const fileListDiv = document.getElementById('fileList');
+            fileListDiv.innerHTML = '<div class="spinner"></div>';
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/mcp/csv/list`);
+                const data = await response.json();
+
+                if (data.files.length === 0) {
+                    fileListDiv.innerHTML = '<p style="text-align: center; color: #6c757d;">No files uploaded yet</p>';
+                    return;
+                }
+
+                fileListDiv.innerHTML = data.files.map(file => `
+                    <div class="file-item">
+                        <div class="file-info">
+                            <div class="file-name">${file.filename}</div>
+                            <div class="file-meta">
+                                Size: ${(file.size / 1024).toFixed(2)} KB | 
+                                Uploaded: ${new Date(file.createdAt).toLocaleString()}
+                            </div>
+                        </div>
+                        <div class="file-actions">
+                            <button class="btn" onclick="viewFile('${file.id}')">👁️ View</button>
+                            <button class="btn btn-danger" onclick="deleteFile('${file.id}')">🗑️ Delete</button>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                fileListDiv.innerHTML = `<p style="color: red;">Error loading files: ${error.message}</p>`;
+            }
+        }
+
+        async function viewFile(fileId) {
+            const dataView = document.getElementById('dataView');
+            const dataContent = document.getElementById('dataContent');
+            
+            dataContent.innerHTML = '<div class="spinner"></div>';
+            dataView.classList.remove('hidden');
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/mcp/csv/${fileId}`);
+                const data = await response.json();
+
+                if (data.success && data.data.records.length > 0) {
+                    const headers = Object.keys(data.data.records[0]);
+                    dataContent.innerHTML = `
+                        <p><strong>File:</strong> ${data.data.filename} | <strong>Records:</strong> ${data.data.recordCount}</p>
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>
+                                </thead>
+                                <tbody>
+                                    ${data.data.records.slice(0, 100).map(record => `
+                                        <tr>${headers.map(h => `<td>${record[h] || ''}</td>`).join('')}</tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                        ${data.data.recordCount > 100 ? `<p style="margin-top: 10px; color: #6c757d;">Showing first 100 of ${data.data.recordCount} records</p>` : ''}
+                    `;
+                } else {
+                    dataContent.innerHTML = '<p>No records found in this file.</p>';
+                }
+            } catch (error) {
+                dataContent.innerHTML = `<p style="color: red;">Error loading file: ${error.message}</p>`;
+            }
+        }
+
+        async function deleteFile(fileId) {
+            if (!confirm('Are you sure you want to delete this file?')) return;
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/mcp/csv/${fileId}`, {
+                    method: 'DELETE'
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('File deleted successfully');
+                    loadFiles();
+                    document.getElementById('dataView').classList.add('hidden');
+                } else {
+                    throw new Error(data.error);
+                }
+            } catch (error) {
+                alert(`Error deleting file: ${error.message}`);
+            }
+        }
+
+        // Initialize
+        checkHealth();
+        loadFiles();
+        setInterval(checkHealth, 30000); // Check health every 30 seconds
+    </script>
+</body>
+</html>

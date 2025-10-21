@@ -33,6 +33,7 @@ pub mod api;
 #[rustfmt::skip]
 pub mod image_config;
 pub mod solana_program;
+pub mod csv_processor;
 use image_config::IMAGE_MAP;
 
 #[cfg(test)]
