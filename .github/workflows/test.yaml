@@ -26,6 +26,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Update apt indexes
+        run: |
+          sudo apt-get update -o Acquire::Retries=3
+
+      - name: Install build deps
+        run: |
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            pkg-config libudev-dev
+
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 
